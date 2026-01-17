@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solana Yield Orchestrator</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="logo-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                            <path d="M8 12L11 15L16 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h1>Solana Yield Orchestrator</h1>
+                </div>
+                <div class="header-info">
+                    <span class="mode-badge" id="mode-badge">{{ mode | upper }}</span>
+                    <span class="sse-indicator" id="sse-indicator" title="Real-time connection">
+                        <span class="sse-dot"></span>
+                        <span id="sse-text">Connecting...</span>
+                    </span>
+                    <span class="status-indicator" id="status-indicator">
+                        <span class="status-dot"></span>
+                        <span id="status-text">Connecting...</span>
+                    </span>
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <section class="dashboard-grid">
+                <div class="card nav-card">
+                    <div class="card-header">
+                        <h2>Portfolio Overview</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="metric-large">
+                            <span class="metric-label">Total NAV</span>
+                            <span class="metric-value" id="total-nav">$0.00</span>
+                        </div>
+                        <div class="metrics-row">
+                            <div class="metric">
+                                <span class="metric-label">Total PnL</span>
+                                <span class="metric-value" id="total-pnl">$0.00</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Return %</span>
+                                <span class="metric-value" id="return-pct">0.00%</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Max Drawdown</span>
+                                <span class="metric-value" id="max-drawdown">0.00%</span>
+                            </div>
+                        </div>
+                        <div class="metrics-row quant-metrics">
+                            <div class="metric">
+                                <span class="metric-label">Sharpe</span>
+                                <span class="metric-value" id="sharpe-ratio">0.00</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Sortino</span>
+                                <span class="metric-value" id="sortino-ratio">0.00</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Volatility</span>
+                                <span class="metric-value" id="nav-volatility">0.00%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card prices-card">
+                    <div class="card-header">
+                        <h2>Live Prices</h2>
+                        <span class="card-subtitle">Multi-source aggregation</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="price-grid" id="price-grid">
+                            <div class="price-item loading">Loading prices...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card allocations-card">
+                    <div class="card-header">
+                        <h2>Strategy Allocations</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="allocation-chart-container">
+                            <canvas id="allocation-chart"></canvas>
+                        </div>
+                        <div class="allocation-legend" id="allocation-legend"></div>
+                    </div>
+                </div>
+
+                <div class="card pnl-breakdown-card">
+                    <div class="card-header">
+                        <h2>PnL Breakdown</h2>
+                        <span class="card-subtitle">Funding / Basis / Fees</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="pnl-chart-container">
+                            <canvas id="pnl-breakdown-chart"></canvas>
+                        </div>
+                        <div class="pnl-breakdown-summary" id="pnl-breakdown-summary">
+                            <div class="pnl-item funding">
+                                <span>Funding</span>
+                                <span id="pnl-funding">$0.00</span>
+                            </div>
+                            <div class="pnl-item basis">
+                                <span>Basis</span>
+                                <span id="pnl-basis">$0.00</span>
+                            </div>
+                            <div class="pnl-item fees">
+                                <span>Fees</span>
+                                <span id="pnl-fees">$0.00</span>
+                            </div>
+                            <div class="pnl-item mtm">
+                                <span>Mark-to-Market</span>
+                                <span id="pnl-mtm">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card funding-card">
+                    <div class="card-header">
+                        <h2>Drift Funding Rates</h2>
+                        <span class="card-subtitle">Perp market APYs</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="funding-table" id="funding-table">
+                            <div class="loading">Loading funding rates...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card chart-card wide">
+                    <div class="card-header">
+                        <h2>NAV History</h2>
+                        <div class="chart-controls">
+                            <button class="chart-btn active" data-range="1h">1H</button>
+                            <button class="chart-btn" data-range="24h">24H</button>
+                            <button class="chart-btn" data-range="7d">7D</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="nav-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card strategies-card wide">
+                    <div class="card-header">
+                        <h2>Strategy Status</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="strategies-grid" id="strategies-grid">
+                            <div class="strategy-card" id="basis-harvester-status">
+                                <div class="strategy-header">
+                                    <h3>Basis Harvester</h3>
+                                    <span class="strategy-badge">basis_bot</span>
+                                </div>
+                                <div class="strategy-metrics">
+                                    <div class="strategy-metric">
+                                        <span>Current Basis</span>
+                                        <span id="basis-current">0 bps</span>
+                                    </div>
+                                    <div class="strategy-metric">
+                                        <span>Est. APY</span>
+                                        <span id="basis-apy">0%</span>
+                                    </div>
+                                    <div class="strategy-metric">
+                                        <span>Positions</span>
+                                        <span id="basis-positions">0</span>
+                                    </div>
+                                    <div class="strategy-metric">
+                                        <span>PnL</span>
+                                        <span id="basis-pnl">$0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="strategy-card" id="funding-rotator-status">
+                                <div class="strategy-header">
+                                    <h3>Funding Rotator</h3>
+                                    <span class="strategy-badge orange">funding_rotator</span>
+                                </div>
+                                <div class="strategy-metrics">
+                                    <div class="strategy-metric">
+                                        <span>Top Market</span>
+                                        <span id="funding-top-market">-</span>
+                                    </div>
+                                    <div class="strategy-metric">
+                                        <span>Best APY</span>
+                                        <span id="funding-best-apy">0%</span>
+                                    </div>
+                                    <div class="strategy-metric">
+                                        <span>Positions</span>
+                                        <span id="funding-positions">0</span>
+                                    </div>
+                                    <div class="strategy-metric">
+                                        <span>Funding Earned</span>
+                                        <span id="funding-earned">$0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card portfolio-builder-card wide">
+                    <div class="card-header">
+                        <h2>Portfolio Builder</h2>
+                        <span class="card-subtitle">Configure strategy & asset allocations</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="portfolio-builder-grid">
+                            <div class="portfolio-config-section">
+                                <div class="form-group">
+                                    <label>Initial NAV ($)</label>
+                                    <input type="number" id="portfolio-nav" value="10000" min="100" step="100">
+                                </div>
+                                <h4>Strategy Weights</h4>
+                                <div class="slider-group">
+                                    <div class="slider-item">
+                                        <label>Basis Harvester</label>
+                                        <div class="slider-row">
+                                            <input type="range" id="weight-basis" min="0" max="100" value="50" class="weight-slider">
+                                            <span class="slider-value" id="weight-basis-value">50%</span>
+                                        </div>
+                                    </div>
+                                    <div class="slider-item">
+                                        <label>Funding Rotator</label>
+                                        <div class="slider-row">
+                                            <input type="range" id="weight-funding" min="0" max="100" value="30" class="weight-slider">
+                                            <span class="slider-value" id="weight-funding-value">30%</span>
+                                        </div>
+                                    </div>
+                                    <div class="slider-item">
+                                        <label>Cash Reserve</label>
+                                        <div class="slider-row">
+                                            <input type="range" id="weight-cash" min="0" max="100" value="20" class="weight-slider">
+                                            <span class="slider-value" id="weight-cash-value">20%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="weight-total" id="weight-total">Total: 100%</div>
+                                
+                                <h4>Asset Weights <span class="dynamic-label">(based on enabled assets)</span></h4>
+                                <div class="slider-group" id="portfolio-sliders">
+                                    <p class="hint">Loading asset sliders...</p>
+                                </div>
+                                <div class="asset-total" id="asset-total">Total: 100%</div>
+                                
+                                <div class="button-row">
+                                    <button class="btn-primary" id="save-portfolio-config">Save Configuration</button>
+                                </div>
+                            </div>
+                            <div class="portfolio-charts-section">
+                                <div class="allocation-comparison">
+                                    <h4>Target vs Actual</h4>
+                                    <div class="comparison-chart-container">
+                                        <canvas id="target-actual-chart"></canvas>
+                                    </div>
+                                    <div class="portfolio-state-summary" id="portfolio-state-summary">
+                                        <div class="state-item">
+                                            <span>Current NAV</span>
+                                            <span id="portfolio-current-nav">$10,000.00</span>
+                                        </div>
+                                        <div class="state-item">
+                                            <span>PnL</span>
+                                            <span id="portfolio-pnl">$0.00</span>
+                                        </div>
+                                        <div class="state-item">
+                                            <span>Return</span>
+                                            <span id="portfolio-return">0.00%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card simulator-card">
+                    <div class="card-header">
+                        <h2>Simulator</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="simulator-form">
+                            <div class="form-group">
+                                <label>Steps</label>
+                                <input type="number" id="sim-steps" value="50" min="10" max="500">
+                            </div>
+                            <div class="form-group">
+                                <label>Capital ($)</label>
+                                <input type="number" id="sim-capital" value="10000" min="100">
+                            </div>
+                            <button class="btn-primary" id="run-simulation">Run Simulation</button>
+                        </div>
+                        <div class="simulator-results" id="simulator-results">
+                            <p class="hint">Run a simulation to see projected results</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card risk-card">
+                    <div class="card-header">
+                        <h2>Risk Monitor</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="risk-indicators" id="risk-indicators">
+                            <div class="risk-item">
+                                <span class="risk-label">Overall Risk</span>
+                                <span class="risk-badge low" id="risk-level">LOW</span>
+                            </div>
+                            <div class="risk-item">
+                                <span class="risk-label">Drawdown</span>
+                                <div class="progress-bar">
+                                    <div class="progress" id="drawdown-progress" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="risk-item">
+                                <span class="risk-label">Leverage</span>
+                                <span id="leverage-value">0.0x</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card trade-card wide">
+                    <div class="card-header">
+                        <h2>Trade Ticket</h2>
+                        <span class="card-subtitle">Simulated paper trading</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="trade-form">
+                            <div class="trade-form-row">
+                                <div class="form-group">
+                                    <label>Venue</label>
+                                    <select id="trade-venue">
+                                        <option value="jupiter">Jupiter (Spot)</option>
+                                        <option value="drift">Drift (Perp)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Asset</label>
+                                    <select id="trade-asset">
+                                        <option value="SOL">SOL</option>
+                                        <option value="BTC">BTC</option>
+                                        <option value="ETH">ETH</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Side</label>
+                                    <div class="side-buttons">
+                                        <button class="side-btn buy active" id="side-buy">Buy/Long</button>
+                                        <button class="side-btn sell" id="side-sell">Sell/Short</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="trade-form-row">
+                                <div class="form-group">
+                                    <label>Size</label>
+                                    <input type="number" id="trade-size" value="1" min="0.001" step="0.1">
+                                </div>
+                                <div class="form-group" id="leverage-group" style="display: none;">
+                                    <label>Leverage</label>
+                                    <select id="trade-leverage">
+                                        <option value="1">1x</option>
+                                        <option value="2">2x</option>
+                                        <option value="3">3x</option>
+                                        <option value="5" selected>5x</option>
+                                        <option value="10">10x</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Slippage (bps)</label>
+                                    <select id="trade-slippage">
+                                        <option value="25">25 bps</option>
+                                        <option value="50" selected>50 bps</option>
+                                        <option value="100">100 bps</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Priority</label>
+                                    <select id="trade-priority">
+                                        <option value="cheap">Cheap</option>
+                                        <option value="balanced" selected>Balanced</option>
+                                        <option value="fast">Fast</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="trade-form-row">
+                                <div class="trade-preview" id="trade-preview">
+                                    <span class="preview-label">Est. Cost:</span>
+                                    <span class="preview-value" id="preview-cost">$0.00</span>
+                                    <span class="preview-label">Price:</span>
+                                    <span class="preview-value" id="preview-price">$0.00</span>
+                                </div>
+                                <button class="btn-primary trade-btn" id="submit-trade">Execute Trade</button>
+                            </div>
+                        </div>
+                        <div class="trade-result" id="trade-result" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <div class="card positions-card wide">
+                    <div class="card-header">
+                        <h2>Positions</h2>
+                        <div class="positions-tabs">
+                            <button class="tab-btn active" data-tab="all">All</button>
+                            <button class="tab-btn" data-tab="spot">Spot</button>
+                            <button class="tab-btn" data-tab="perp">Perp</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="positions-table" id="positions-table">
+                            <div class="positions-row header">
+                                <span class="col-market">Market</span>
+                                <span class="col-side">Side</span>
+                                <span class="col-size">Size</span>
+                                <span class="col-entry">Entry</span>
+                                <span class="col-current">Current</span>
+                                <span class="col-pnl">PnL</span>
+                                <span class="col-liq">Liq. Price</span>
+                            </div>
+                            <div class="positions-empty">No open positions</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card sim-settings-card">
+                    <div class="card-header">
+                        <h2>Simulation Settings</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="sim-settings-form">
+                            <div class="form-group">
+                                <label>Strategy Profile</label>
+                                <select id="strategy-profile">
+                                    <option value="">Custom</option>
+                                    <option value="conservative">Conservative</option>
+                                    <option value="balanced">Balanced</option>
+                                    <option value="aggro">Aggressive Yield</option>
+                                </select>
+                            </div>
+                            <div class="profile-description" id="profile-description"></div>
+                            <div class="form-group">
+                                <label>Initial NAV ($)</label>
+                                <input type="number" id="sim-nav" value="10000" min="100">
+                            </div>
+                            <div class="form-group">
+                                <label>Active Strategies</label>
+                                <div class="strategy-toggles">
+                                    <label class="toggle-item">
+                                        <input type="checkbox" id="strat-basis" checked>
+                                        <span>Basis</span>
+                                    </label>
+                                    <label class="toggle-item">
+                                        <input type="checkbox" id="strat-funding" checked>
+                                        <span>Funding</span>
+                                    </label>
+                                    <label class="toggle-item">
+                                        <input type="checkbox" id="strat-carry">
+                                        <span>Carry</span>
+                                    </label>
+                                    <label class="toggle-item">
+                                        <input type="checkbox" id="strat-volatility">
+                                        <span>Volatility</span>
+                                    </label>
+                                    <label class="toggle-item">
+                                        <input type="checkbox" id="strat-basket">
+                                        <span>Hedged</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Basis Entry (bps)</label>
+                                <input type="number" id="sim-basis-entry" value="50" min="1" max="500">
+                            </div>
+                            <div class="form-group">
+                                <label>Funding Min APY (%)</label>
+                                <input type="number" id="sim-funding-min" value="10" min="0" max="100">
+                            </div>
+                            <div class="button-row">
+                                <button class="btn-secondary" id="save-sim-config">Apply Settings</button>
+                                <button class="btn-danger" id="reset-sim">Reset Account</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card scenario-card">
+                    <div class="card-header">
+                        <h2>Scenario / What-If</h2>
+                        <span class="card-subtitle">Stress test your portfolio</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="scenario-form">
+                            <div class="form-group">
+                                <label>SOL Price Shock</label>
+                                <select id="scenario-sol-shock">
+                                    <option value="0.5">+50%</option>
+                                    <option value="0.25">+25%</option>
+                                    <option value="0.1">+10%</option>
+                                    <option value="0" selected>No change</option>
+                                    <option value="-0.1">-10%</option>
+                                    <option value="-0.25">-25%</option>
+                                    <option value="-0.5">-50%</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>BTC Price Shock</label>
+                                <select id="scenario-btc-shock">
+                                    <option value="0.5">+50%</option>
+                                    <option value="0.25">+25%</option>
+                                    <option value="0.1">+10%</option>
+                                    <option value="0" selected>No change</option>
+                                    <option value="-0.1">-10%</option>
+                                    <option value="-0.25">-25%</option>
+                                    <option value="-0.5">-50%</option>
+                                </select>
+                            </div>
+                            <button class="btn-primary" id="run-scenario">Run Scenario</button>
+                        </div>
+                        <div class="scenario-results" id="scenario-results">
+                            <p class="hint">Run a scenario to stress-test your portfolio</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card perp-risk-card">
+                    <div class="card-header">
+                        <h2>Perp Risk</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="perp-risk-summary" id="perp-risk-summary">
+                            <div class="risk-item">
+                                <span class="risk-label">Total Notional</span>
+                                <span id="perp-notional">$0.00</span>
+                            </div>
+                            <div class="risk-item">
+                                <span class="risk-label">Total Margin</span>
+                                <span id="perp-margin">$0.00</span>
+                            </div>
+                            <div class="risk-item">
+                                <span class="risk-label">Avg Leverage</span>
+                                <span id="perp-avg-leverage">0.0x</span>
+                            </div>
+                            <div class="risk-item">
+                                <span class="risk-label">Risk Level</span>
+                                <span class="risk-badge low" id="perp-risk-level">LOW</span>
+                            </div>
+                        </div>
+                        <div class="perp-warnings" id="perp-warnings"></div>
+                    </div>
+                </div>
+
+                <div class="card jupiter-routes-card wide">
+                    <div class="card-header">
+                        <h2>Jupiter Route Analytics</h2>
+                        <span class="card-subtitle">Depth, slippage, and route comparison</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="jupiter-routes-controls">
+                            <select id="jupiter-input-token">
+                                <option value="SOL" selected>SOL</option>
+                                <option value="USDC">USDC</option>
+                            </select>
+                            <span class="arrow">→</span>
+                            <select id="jupiter-output-token">
+                                <option value="USDC" selected>USDC</option>
+                                <option value="SOL">SOL</option>
+                            </select>
+                            <input type="number" id="jupiter-amount" value="1" min="0.1" step="0.1" placeholder="Amount">
+                            <button class="btn-secondary" id="fetch-jupiter-routes">Analyze Routes</button>
+                        </div>
+                        <div class="jupiter-routes-results" id="jupiter-routes-results">
+                            <p class="hint">Click "Analyze Routes" to compare swap routes</p>
+                        </div>
+                        <div class="jupiter-health" id="jupiter-health"></div>
+                    </div>
+                </div>
+
+                <div class="card chain-heartbeat-card">
+                    <div class="card-header">
+                        <h2>Chain Heartbeat</h2>
+                        <span class="card-subtitle">Solana network state</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="chain-metrics" id="chain-metrics">
+                            <div class="chain-metric">
+                                <span class="metric-label">Latest Slot</span>
+                                <span class="metric-value" id="chain-slot">-</span>
+                            </div>
+                            <div class="chain-metric">
+                                <span class="metric-label">Last Update</span>
+                                <span class="metric-value" id="chain-last-update">-</span>
+                            </div>
+                            <div class="chain-metric">
+                                <span class="metric-label">Connected</span>
+                                <span class="metric-value" id="chain-connected">-</span>
+                            </div>
+                        </div>
+                        <div class="priority-fees" id="priority-fees">
+                            <h4>Priority Fees (lamports)</h4>
+                            <div class="fee-grid">
+                                <div class="fee-item cheap">
+                                    <span>Cheap</span>
+                                    <span id="fee-cheap">-</span>
+                                </div>
+                                <div class="fee-item balanced">
+                                    <span>Balanced</span>
+                                    <span id="fee-balanced">-</span>
+                                </div>
+                                <div class="fee-item fast">
+                                    <span>Fast</span>
+                                    <span id="fee-fast">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card funding-term-card">
+                    <div class="card-header">
+                        <h2>Funding Term Structure</h2>
+                        <span class="card-subtitle">Drift funding rates by tenor</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="term-structure-table" id="term-structure-table">
+                            <div class="loading">Loading term structure...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card margin-heatmap-card">
+                    <div class="card-header">
+                        <h2>Margin Heatmap</h2>
+                        <span class="card-subtitle">Position margin utilization</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="margin-summary" id="margin-summary">
+                            <div class="margin-stat">
+                                <span>Total Margin Used</span>
+                                <span id="margin-total">$0.00</span>
+                            </div>
+                            <div class="margin-stat">
+                                <span>Utilization</span>
+                                <span id="margin-utilization">0%</span>
+                            </div>
+                        </div>
+                        <div class="margin-positions" id="margin-positions">
+                            <p class="hint">No margin positions</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card hft-metrics-card">
+                    <div class="card-header">
+                        <h2>HFT Metrics</h2>
+                        <span class="card-subtitle">Latency and rate limits</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="latency-grid" id="latency-grid">
+                            <div class="latency-item">
+                                <span class="venue">Jupiter</span>
+                                <span class="latency" id="latency-jupiter">- ms</span>
+                            </div>
+                            <div class="latency-item">
+                                <span class="venue">Drift</span>
+                                <span class="latency" id="latency-drift">- ms</span>
+                            </div>
+                            <div class="latency-item">
+                                <span class="venue">Hyperliquid</span>
+                                <span class="latency" id="latency-hyperliquid">- ms</span>
+                            </div>
+                        </div>
+                        <div class="execution-mode" id="execution-mode">
+                            <label>Execution Mode</label>
+                            <select id="exec-mode-select">
+                                <option value="passive">Passive</option>
+                                <option value="balanced" selected>Balanced</option>
+                                <option value="aggressive">Aggressive</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card cross-venue-card wide">
+                    <div class="card-header">
+                        <h2>Cross-Venue Funding</h2>
+                        <span class="card-subtitle">Drift vs Hyperliquid arbitrage opportunities</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="cross-venue-table" id="cross-venue-table">
+                            <div class="cross-venue-row header">
+                                <span class="col-symbol">Symbol</span>
+                                <span class="col-drift">Drift Rate</span>
+                                <span class="col-hl">Hyperliquid Rate</span>
+                                <span class="col-diff">Diff (bps)</span>
+                                <span class="col-suggestion">Suggested Trade</span>
+                            </div>
+                            <div class="loading">Loading cross-venue data...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card asset-universe-card">
+                    <div class="card-header">
+                        <h2>Asset Universe</h2>
+                        <span class="card-subtitle">Manage enabled assets</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="asset-chips" id="asset-chips">
+                            <div class="loading">Loading assets...</div>
+                        </div>
+                        <button class="btn-secondary btn-sm" id="save-assets">Save Selection</button>
+                    </div>
+                </div>
+
+                <div class="card basis-map-card">
+                    <div class="card-header">
+                        <h2>Cross-Venue Basis Map</h2>
+                        <span class="card-subtitle">Spot vs Perp basis by venue</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="basis-grid" id="basis-grid">
+                            <div class="loading">Loading basis data...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card venue-status-card">
+                    <div class="card-header">
+                        <h2>Venue Health</h2>
+                        <span class="card-subtitle">Kill switch status</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="venue-health-grid" id="venue-health-grid">
+                            <div class="venue-item">
+                                <span class="venue-name">Drift</span>
+                                <div class="venue-health-bar">
+                                    <div class="health-fill" id="drift-health-fill"></div>
+                                </div>
+                                <span class="venue-health-pct" id="drift-health-pct">100%</span>
+                            </div>
+                            <div class="venue-item">
+                                <span class="venue-name">Hyperliquid</span>
+                                <div class="venue-health-bar">
+                                    <div class="health-fill" id="hl-health-fill"></div>
+                                </div>
+                                <span class="venue-health-pct" id="hl-health-pct">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card latency-budget-card">
+                    <div class="card-header">
+                        <h2>HFT Latency Budget</h2>
+                        <span class="card-subtitle">Per-flow breakdown</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="latency-budget" id="latency-budget">
+                            <div class="budget-row">
+                                <span class="budget-label">Pricing</span>
+                                <div class="budget-bar-container">
+                                    <div class="budget-bar" style="width: 6%"></div>
+                                </div>
+                                <span class="budget-value">30ms</span>
+                            </div>
+                            <div class="budget-row">
+                                <span class="budget-label">Decision</span>
+                                <div class="budget-bar-container">
+                                    <div class="budget-bar" style="width: 1%"></div>
+                                </div>
+                                <span class="budget-value">5ms</span>
+                            </div>
+                            <div class="budget-row">
+                                <span class="budget-label">TX Build</span>
+                                <div class="budget-bar-container">
+                                    <div class="budget-bar" style="width: 2%"></div>
+                                </div>
+                                <span class="budget-value">8ms</span>
+                            </div>
+                            <div class="budget-row">
+                                <span class="budget-label">Submit</span>
+                                <div class="budget-bar-container">
+                                    <div class="budget-bar" style="width: 3%"></div>
+                                </div>
+                                <span class="budget-value">15ms</span>
+                            </div>
+                            <div class="budget-row">
+                                <span class="budget-label">Confirm</span>
+                                <div class="budget-bar-container">
+                                    <div class="budget-bar" style="width: 80%"></div>
+                                </div>
+                                <span class="budget-value">400ms</span>
+                            </div>
+                        </div>
+                        <div class="budget-summary">
+                            <span>Total: <span id="budget-total">458ms</span></span>
+                            <span>Budget: <span id="budget-target">500ms</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card chain-logs-card">
+                    <div class="card-header">
+                        <h2>Solana Logs</h2>
+                        <span class="card-subtitle">Real-time chain events</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="logs-container" id="logs-container">
+                            <div class="log-empty">Waiting for logs...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card oracle-health-card">
+                    <div class="card-header">
+                        <h2>Oracle Health</h2>
+                        <span class="card-subtitle">Pyth deviation monitoring</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="oracle-summary" id="oracle-summary">
+                            <div class="oracle-bucket clean">
+                                <span class="bucket-count" id="oracle-clean-count">0</span>
+                                <span class="bucket-label">Clean</span>
+                            </div>
+                            <div class="oracle-bucket watch">
+                                <span class="bucket-count" id="oracle-watch-count">0</span>
+                                <span class="bucket-label">Watch</span>
+                            </div>
+                            <div class="oracle-bucket flagged">
+                                <span class="bucket-count" id="oracle-flagged-count">0</span>
+                                <span class="bucket-label">Flagged</span>
+                            </div>
+                        </div>
+                        <div class="oracle-table" id="oracle-table">
+                            <div class="oracle-row header">
+                                <span class="col-symbol">Symbol</span>
+                                <span class="col-pyth">Pyth Price</span>
+                                <span class="col-composite">Composite</span>
+                                <span class="col-dev">Deviation</span>
+                                <span class="col-status">Status</span>
+                            </div>
+                            <div class="loading">Loading oracle data...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card route-quality-card">
+                    <div class="card-header">
+                        <h2>Route Quality Tracking</h2>
+                        <span class="card-subtitle">Historical DEX performance</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="route-quality-table" id="route-quality-table">
+                            <div class="route-row header">
+                                <span class="col-route">Route</span>
+                                <span class="col-trades">Trades</span>
+                                <span class="col-fail">Fail Rate</span>
+                                <span class="col-slip">Avg Slippage</span>
+                                <span class="col-mev">MEV Risk</span>
+                                <span class="col-score">Score</span>
+                            </div>
+                            <div class="loading">Loading route data...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <span>Solana Yield Orchestrator</span>
+                <span class="footer-divider">|</span>
+                <span>Powered by Jupiter, Drift, CoinGecko, Kraken</span>
+                <span class="footer-divider">|</span>
+                <span id="last-update">Last update: -</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="/static/main.js"></script>
+</body>
+</html>
