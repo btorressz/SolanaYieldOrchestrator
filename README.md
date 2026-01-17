@@ -37,4 +37,47 @@ The Solana Yield Orchestrator is an automated trading and analytics system desig
 - **Simulation Mode** (default): Paper trading with mock or live data
 - **Live Mode**: Real trading with actual capital
 
+  
+## Key Features
+
+### 1. Multi-Source Price Aggregation (6 Venues)
+
+| Source | Badge | Purpose | Coverage |
+|--------|-------|---------|----------|
+| **Jupiter Aggregator** | `J` | On-chain DEX aggregation | All Solana tokens |
+| **CoinGecko** | `CG` | Reference price validation | All tokens |
+| **Kraken** | `K` | CEX price cross-reference | SOL, BTC, ETH, XRP |
+| **Hyperliquid** | `HL` | Perpetual venue prices | SOL, BTC, ETH |
+| **Drift Protocol** | `DR` | Perpetual mark prices | SOL-PERP, BTC-PERP, ETH-PERP |
+| **Pyth Network** | `PY` | Decentralized oracle feeds | All supported tokens |
+
+### 2. Pyth Oracle Integration
+
+- **Status Indicators**: Clean (≤25 bps), Watch (25-100 bps), Flagged (>100 bps)
+- **Automatic Trade Blocking**: Prevents trades when deviation exceeds threshold
+- **Configurable Threshold**: `MAX_ORACLE_DEVIATION_BPS` environment variable
+- **Real-Time Monitoring**: Inline display in Live Prices panel
+
+### 3. Cross-Venue Analytics
+
+- **Basis Comparison**: Spot vs perpetual price spreads across venues
+- **Funding Rate Analysis**: Side-by-side venue funding rates
+- **MEV Risk Assessment**: Classifies DEX routes (Low/Medium/High risk)
+- **Venue Health Monitoring**: Circuit breaker status and latency tracking
+
+### 4. Dynamic Asset Universe
+
+**12 Supported Assets:**
+- **Native**: SOL
+- **Wrapped**: BTC, ETH, XRP
+- **Liquid Staking**: mSOL
+- **Governance**: JTO, JUP
+- **DEX Tokens**: ORCA, RAY
+- **Stablecoins**: USDC, USDT
+- **Memes**: BONK
+
+All UI components dynamically adapt to enabled assets with real-time updates.
+
+---
+
 ---
