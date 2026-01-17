@@ -80,4 +80,75 @@ All UI components dynamically adapt to enabled assets with real-time updates.
 
 ---
 
+
+## Project Structure
+
+```
+solana-yield-orchestrator/
+├── app.py                          # Main Flask application (2433 lines)
+├── config.py                       # Configuration management (301 lines)
+├── simulator.py                    # Monte Carlo simulation engine (10189 lines)
+├── requirements.txt                # Python dependencies
+│
+├── ai/                             # AI Agent Integration (Phase 2)
+│   ├── __init__.py                 # Package exports
+│   └── agent_bridge.py             # Agent tool definitions and execution
+│
+├── infra/                          # Infrastructure Layer (blockchain & venues)
+│   ├── __init__.py
+│   ├── solana_client.py            # Solana RPC client wrapper
+│   ├── jupiter_client.py           # Jupiter aggregator integration
+│   ├── drift_client.py             # Drift Protocol perpetual trading
+│   ├── hyperliquid_client.py       # Hyperliquid perpetual venue (optional)
+│   ├── pyth_client.py              # Pyth oracle price feeds
+│   ├── perp_venue.py               # Abstract perpetual venue interface
+│   ├── solana_chain_monitor.py     # Chain state monitoring
+│   ├── redis_client.py             # Redis caching layer
+│   ├── rate_limiter.py             # API rate limiting
+│   ├── priority_router.py          # Multi-venue execution routing
+│   └── metrics_tracker.py          # HFT metrics collection
+│
+├── data/                           # Data Layer (aggregation & analytics)
+│   ├── __init__.py
+│   ├── data_fetcher.py             # Multi-source price aggregation
+│   ├── analytics.py                # Performance analytics
+│   └── mock_data.py                # Mock data for offline testing
+│
+├── strategies/                     # Yield Strategy Implementations
+│   ├── __init__.py
+│   ├── basis_harvester.py          # Spot-perp basis trading
+│   ├── funding_rotator.py          # Funding rate arbitrage
+│   ├── perp_spread.py              # Cross-perp spread trading
+│   ├── cross_venue_funding_arb.py  # Multi-venue funding arb
+│   ├── hedged_basket.py            # Hedged portfolio basket
+│   ├── volatility_scaler.py        # Vol-scaled position sizing
+│   └── carry_optimizer.py          # Carry trade optimization
+│
+├── trading/                        # Trading Execution Layer
+│   ├── __init__.py
+│   ├── paper_account.py            # Simulation paper trading (701 lines)
+│   └── portfolio_config.py         # Portfolio configuration (207 lines)
+│
+├── vault/                          # Risk & Portfolio Management
+│   ├── __init__.py
+│   ├── vault_manager.py            # Risk limits and position sizing
+│   └── mock_hedge_basket.py        # Mock hedge implementation
+│
+├── utils/                          # Utility Functions
+│   ├── __init__.py
+│   ├── logging_utils.py            # Centralized logging
+│   └── risk_limits.py              # Risk limit definitions
+│
+├── templates/                      # HTML Templates
+│   └── index.html                  # Main dashboard (899 lines, 17+ panels)
+│
+├── static/                         # Frontend Assets
+│   ├── main.js                     # Dashboard logic (2115 lines)
+│   └── style.css                   # Styling (2448 lines)
+│
+└── .replit & .gitignore           # Project configuration
+```
+
+---
+
 ---
