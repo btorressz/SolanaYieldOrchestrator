@@ -151,4 +151,57 @@ solana-yield-orchestrator/
 
 ---
 
+## File Documentation
+
+### Core Application Files
+
+#### `app.py` (Main Flask Server - 2433 lines)
+**Purpose:** Central Flask REST API server orchestrating all system components
+**Key Responsibilities:**
+- Flask app initialization and CORS setup
+- Client initialization (Solana, Jupiter, Drift, Hyperliquid, Pyth)
+- 60+ REST API endpoints for dashboard, portfolio, trading, streaming
+- Server-Sent Events (SSE) for real-time updates
+- Paper trading execution and simulation
+- Risk management and position monitoring
+
+**Key Sections:**
+- **Initialization**: Client setup for blockchain, venues, data sources
+- **Portfolio API**: `/api/portfolio/*` endpoints for position and state management
+- **Pricing API**: `/api/prices`, `/api/venue/*` for price aggregation
+- **Trading API**: `/api/trade/*` for order execution and simulation
+- **Analytics API**: `/api/metrics`, `/api/hft/*` for performance tracking
+- **Agent API**: `/api/agent/*` for experimental AI integration (when enabled)
+- **Streaming**: `/events` endpoint for live dashboard updates
+
+#### `config.py` (Configuration Manager - 301 lines)
+**Purpose:** Centralized configuration management with feature flags and environment variables
+**Key Components:**
+- **Asset Configuration**: 12 supported assets with mint addresses, decimals, exchange mappings
+- **Venue Credentials**: Solana RPC, Drift, Hyperliquid, Pyth endpoints
+- **Feature Flags**: Hyperliquid, Pyth, Agent Kit enable/disable
+- **Strategy Parameters**: Basis thresholds, funding rates, rotation epochs
+- **Risk Limits**: Max position size, max leverage, max drawdown, slippage
+- **Rate Limiting**: Per-venue API rate limits (RPS and RPM)
+- **Trading Execution**: Priority fees, retry logic, TWAP parameters
+
+**Key Methods:**
+- `get_asset_info()`: Returns comprehensive asset metadata
+- `get_all_assets_info()`: Lists all configured assets
+- `get_mint_address()`: Maps symbol to SPL token mint
+- `is_simulation()`: Mode detection
+
+#### `simulator.py` (Monte Carlo Simulation Engine - 10189 lines)
+**Purpose:** Paper trading engine with Monte Carlo simulation for strategy backtesting
+**Key Features:**
+- Monte Carlo price path generation
+- Position lifecycle management (entry, hold, exit)
+- PnL tracking and performance metrics
+- Sharpe ratio, Sortino ratio, volatility, max drawdown calculation
+- Risk limit enforcement
+- Strategy execution in simulated environment
+
+---
+
+
 ---
