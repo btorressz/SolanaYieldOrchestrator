@@ -33,6 +33,18 @@ The application is structured into modular layers: `infra` (blockchain/venue int
 - **Per-Venue Tracking**: API call counting, rate limit monitoring, and latency tracking are implemented for each integrated venue.
 - **Real-Time Streaming**: Server-Sent Events (SSE) provide continuous dashboard updates without polling.
 
+  
+## External Dependencies
+- **Solana RPC**: For all blockchain interactions, transaction building, balance queries, and chain state.
+- **Jupiter Aggregator**: Used for DEX swap quoting, route analysis, and MEV assessment.
+- **Drift Protocol**: Provides perpetual market data, funding rates, and margin calculations.
+- **Hyperliquid**: An optional perpetual venue for cross-venue strategies.
+- **Pyth Network**: Integrates decentralized oracle price feeds and monitors price deviation.
+- **CoinGecko API**: Serves as a reference for price data and multi-asset support.
+- **Kraken API**: Utilized for centralized exchange price validation.
+- **Redis**: Employed for high-performance caching and pub/sub functionality.
+- **Solana Agent Kit**: An optional (experimental, disabled by default) AI agent framework for automated strategy execution.
+
 **UI/UX Decisions:**
 The frontend utilizes a responsive grid layout with a dark theme (Solana Purple/Teal/Orange color scheme). It features 17+ interactive panels including Portfolio Overview, Live Prices, Positions, Funding Rates, PnL Breakdown, Performance Metrics, and Risk Metrics. Chart.js visualizations are used for NAV history, allocation, and PnL breakdowns. Asset-specific icons, gradients, and status indicators enhance user experience.
 
