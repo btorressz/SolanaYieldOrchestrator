@@ -174,7 +174,7 @@ solana-yield-orchestrator/
 - **Agent API**: `/api/agent/*` for experimental AI integration (when enabled)
 - **Streaming**: `/events` endpoint for live dashboard updates
 
-#### `config.py` (Configuration Manager - 301 lines)
+#### `config.py` (Configuration Manager)
 **Purpose:** Centralized configuration management with feature flags and environment variables
 **Key Components:**
 - **Asset Configuration**: 12 supported assets with mint addresses, decimals, exchange mappings
@@ -191,7 +191,7 @@ solana-yield-orchestrator/
 - `get_mint_address()`: Maps symbol to SPL token mint
 - `is_simulation()`: Mode detection
 
-#### `simulator.py` (Monte Carlo Simulation Engine - 10189 lines)
+#### `simulator.py` (Monte Carlo Simulation Engine)
 **Purpose:** Paper trading engine with Monte Carlo simulation for strategy backtesting
 **Key Features:**
 - Monte Carlo price path generation
@@ -319,7 +319,7 @@ Identifies and optimizes carry trade opportunities across venues
 
 ### Vault Layer (`vault/`)
 
-#### `vault_manager.py` (Risk Management - 388 lines)
+#### `vault_manager.py` (Risk Management)
 **Purpose:** Enforce risk limits and portfolio constraints
 **Key Responsibilities:**
 - Risk limit configuration (max position size, max leverage, max drawdown)
@@ -344,7 +344,7 @@ Risk limit type definitions and validation
 
 ### Frontend Files
 
-#### `templates/index.html` (Main Dashboard - 899 lines)
+#### `templates/index.html` (Main Dashboard)
 **Purpose:** Primary HTML template for dashboard UI
 **Key Sections (17+ Panels):**
 1. **Portfolio Overview**: NAV, PnL, return %, Sharpe, Sortino, volatility
@@ -372,7 +372,7 @@ Risk limit type definitions and validation
 - Asset-specific icons and gradients
 - Solana theme (Purple/Teal/Orange)
 
-#### `static/main.js` (Dashboard Logic - 2115 lines)
+#### `static/main.js` (Dashboard Logic)
 **Purpose:** Client-side dashboard logic and real-time updates
 **Key Functionalities:**
 - **Initialization**: Load assets, prices, positions on startup
@@ -400,7 +400,7 @@ Risk limit type definitions and validation
 - `executeTrade()`: Submit trade orders
 - `updateMetrics()`: Compute performance metrics
 
-#### `static/style.css` (Styling - 2448 lines)
+#### `static/style.css` (Styling)
 **Purpose:** Complete application styling and theming
 **Key Design Elements:**
 - **Theme Colors**: 
