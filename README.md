@@ -155,7 +155,7 @@ solana-yield-orchestrator/
 
 ### Core Application Files
 
-#### `app.py` (Main Flask Server - 2433 lines)
+#### `app.py` (Main Flask Server)
 **Purpose:** Central Flask REST API server orchestrating all system components
 **Key Responsibilities:**
 - Flask app initialization and CORS setup
