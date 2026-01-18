@@ -85,9 +85,9 @@ All UI components dynamically adapt to enabled assets with real-time updates.
 
 ```
 solana-yield-orchestrator/
-├── app.py                          # Main Flask application (2433 lines)
-├── config.py                       # Configuration management (301 lines)
-├── simulator.py                    # Monte Carlo simulation engine (10189 lines)
+├── app.py                          # Main Flask application 
+├── config.py                       # Configuration management 
+├── simulator.py                    # Monte Carlo simulation engine 
 ├── requirements.txt                # Python dependencies
 │
 ├── ai/                             # AI Agent Integration (Phase 2)
@@ -126,7 +126,7 @@ solana-yield-orchestrator/
 │
 ├── trading/                        # Trading Execution Layer
 │   ├── __init__.py
-│   ├── paper_account.py            # Simulation paper trading (701 lines)
+│   ├── paper_account.py            # Simulation paper trading 
 │   └── portfolio_config.py         # Portfolio configuration (207 lines)
 │
 ├── vault/                          # Risk & Portfolio Management
