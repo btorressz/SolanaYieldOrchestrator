@@ -127,7 +127,7 @@ solana-yield-orchestrator/
 ├── trading/                        # Trading Execution Layer
 │   ├── __init__.py
 │   ├── paper_account.py            # Simulation paper trading 
-│   └── portfolio_config.py         # Portfolio configuration (207 lines)
+│   └── portfolio_config.py         # Portfolio configuration 
 │
 ├── vault/                          # Risk & Portfolio Management
 │   ├── __init__.py
