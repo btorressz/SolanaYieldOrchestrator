@@ -140,7 +140,7 @@ solana-yield-orchestrator/
 │   └── risk_limits.py              # Risk limit definitions
 │
 ├── templates/                      # HTML Templates
-│   └── index.html                  # Main dashboard (899 lines, 17+ panels)
+│   └── index.html                  # Main dashboard 
 │
 ├── static/                         # Frontend Assets
 │   ├── main.js                     # Dashboard logic (2115 lines)
