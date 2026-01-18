@@ -293,7 +293,7 @@ Identifies and optimizes carry trade opportunities across venues
 
 ### Trading Layer (`trading/`)
 
-#### `paper_account.py` (Paper Trading Engine - 701 lines)
+#### `paper_account.py` (Paper Trading Engine)
 **Purpose:** Simulates trading without real capital
 **Key Features:**
 - Position tracking and lifecycle
@@ -309,7 +309,7 @@ Identifies and optimizes carry trade opportunities across venues
 - `get_metrics()`: Performance metrics
 - `get_positions()`: Current holdings
 
-#### `portfolio_config.py` (Portfolio Configuration - 207 lines)
+#### `portfolio_config.py` (Portfolio Configuration)
 **Purpose:** Manage portfolio strategy weights and settings
 - Strategy allocation profiles (Aggressive, Balanced, Conservative)
 - Per-strategy weight configuration
