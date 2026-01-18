@@ -144,7 +144,7 @@ solana-yield-orchestrator/
 │
 ├── static/                         # Frontend Assets
 │   ├── main.js                     # Dashboard logic 
-│   └── style.css                   # Styling (2448 lines)
+│   └── style.css                   # Styling 
 │
 └── .replit & .gitignore           # Project configuration
 ```
