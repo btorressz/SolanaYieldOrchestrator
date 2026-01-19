@@ -139,3 +139,35 @@ Portfolio constraints and position sizing.
 | `style.css` | 2,448 | Complete styling with Solana theme (Purple/Teal/Orange), responsive grid, dark mode |
 
 ---
+
+# Data Flow
+
+```
+External APIs (Solana, Jupiter, Drift, Hyperliquid, Pyth, Kraken, CoinGecko)
+                    |
+                    v
+        infra/ (blockchain clients)
+                    |
+                    v
+        data/ (price aggregation)
+                    |
+                    v
+        strategies/ (signal generation)
+                    |
+                    v
+        vault/ (risk management)
+                    |
+                    v
+        trading/ (execution)
+                    |
+                    v
+        app.py (REST API + SSE)
+                    |
+                    v
+        templates/ + static/ (Dashboard UI)
+```
+
+---
+
+
+---
