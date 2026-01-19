@@ -55,7 +55,7 @@ class PythClient:
         "ORCA": "37505261e557e251290b8c8899453064e8d760ed5c65cc9fa0de9e24ff5ebb24",
     }
 
-    PYTH_API_URL = "https://hermes.pyth.network/api/latest_price_feeds"
+    PYTH_API_URL = "https://hermes.pyth.network/v2/updates/price/latest"
 
     def __init__(self, enabled: bool = False, max_deviation_bps: int = 100, request_timeout_s: float = 3.0):
         self._enabled = enabled
@@ -68,8 +68,6 @@ class PythClient:
 
         self._session = requests.Session()
 
-        # FIX: requests.Session has no "timeout" attribute (pyright Ln 68)
-        # Store timeout on the client and pass it explicitly per request.
         self._request_timeout_s = float(request_timeout_s)
 
         self._deviation_thresholds = {
@@ -91,28 +89,31 @@ class PythClient:
         return time.time() - self._cache_timestamp > self._cache_ttl
 
     def _fetch_pyth_prices(self) -> Dict[str, PythPriceData]:
-        """Fetch latest prices from Pyth Hermes API."""
+        """Fetch latest prices from Pyth Hermes API v2."""
         if not self._enabled:
             return self._get_mock_prices()
 
         try:
-            price_ids = list(self.PYTH_PRICE_IDS.values())
-            params = {"ids[]": price_ids}
+            price_ids = ["0x" + pid for pid in self.PYTH_PRICE_IDS.values()]
+            params = [("ids[]", pid) for pid in price_ids]
 
             response = self._session.get(
                 self.PYTH_API_URL,
                 params=params,
-                timeout=self._request_timeout_s,  # FIX: pass timeout here
+                timeout=self._request_timeout_s,
             )
             response.raise_for_status()
             data = response.json()
 
             prices: Dict[str, PythPriceData] = {}
-            id_to_symbol = {v: k for k, v in self.PYTH_PRICE_IDS.items()}
+            id_to_symbol = {"0x" + v: k for k, v in self.PYTH_PRICE_IDS.items()}
 
-            # Hermes API returns a list of feeds
-            for feed in data:
-                feed_id = str(feed.get("id", "")).replace("0x", "")
+            feeds = data.get("parsed", []) if isinstance(data, dict) else data
+
+            for feed in feeds:
+                feed_id = str(feed.get("id", ""))
+                if not feed_id.startswith("0x"):
+                    feed_id = "0x" + feed_id
                 symbol = id_to_symbol.get(feed_id)
 
                 if not symbol:
@@ -123,7 +124,6 @@ class PythClient:
                 expo = int(price_data.get("expo", 0))
                 conf = float(price_data.get("conf", 0.0))
 
-                # Pyth "price" is price * 10^expo (expo is usually negative)
                 actual_price = price * (10 ** expo)
                 actual_conf = conf * (10 ** expo)
 
@@ -133,11 +133,12 @@ class PythClient:
                     confidence=float(actual_conf),
                     expo=expo,
                     publish_time=int(price_data.get("publish_time", 0)),
-                    status=str(feed.get("status", "trading")),
+                    status="trading",
                 )
 
-            logger.debug(f"Fetched {len(prices)} Pyth prices")
-            return prices
+            if prices:
+                logger.debug(f"Fetched {len(prices)} Pyth prices from v2 API")
+            return prices if prices else self._get_mock_prices()
 
         except Exception as e:
             logger.warning(f"Pyth API fetch failed: {e}, using mock data")
