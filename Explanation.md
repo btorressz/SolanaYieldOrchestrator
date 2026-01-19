@@ -169,5 +169,15 @@ External APIs (Solana, Jupiter, Drift, Hyperliquid, Pyth, Kraken, CoinGecko)
 
 ---
 
+# Key Features
+
+- **Multi-Source Price Aggregation**: 6 venues with weighted averaging
+- **Real-Time Updates**: SSE streaming every 5 seconds
+- **Paper Trading**: Risk-free strategy testing
+- **Oracle Monitoring**: Pyth price deviation tracking with trade blocking
+- **MEV Protection**: Route analysis for safer swaps
+- **AI Agent Integration**: Experimental automated execution (disabled by default)
+
+---
 
 ---
