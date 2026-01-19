@@ -129,3 +129,13 @@ Portfolio constraints and position sizing.
 | `index.html` | 899 | Main dashboard with 17+ panels: Portfolio Overview, Live Prices, Positions, Funding Rates, Risk Metrics, PnL Breakdown, Chain State, and more |
 
 ---
+
+
+### `static/` - Frontend Assets
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `main.js` | 2,115 | Dashboard logic: SSE streaming, Chart.js visualizations, API calls, user interactions |
+| `style.css` | 2,448 | Complete styling with Solana theme (Purple/Teal/Orange), responsive grid, dark mode |
+
+---
