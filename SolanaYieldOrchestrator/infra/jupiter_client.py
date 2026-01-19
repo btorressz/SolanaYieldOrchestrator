@@ -780,7 +780,7 @@ class EnhancedJupiterClient(JupiterClient):
         quote_mint = COMMON_TOKENS.get(quote_symbol.upper(), USDC_MINT)
 
         if not base_mint:
-            return self._generate_mock_impact_curve writer(base_symbol, quote_symbol, side, max_size, points)  # type: ignore[name-defined]
+            return self._generate_mock_impact_curve(base_symbol, quote_symbol, side, max_size, points)
 
         base_decimals = DECIMALS_MAP.get(base_symbol.upper(), 6)
         quote_decimals = DECIMALS_MAP.get(quote_symbol.upper(), 6)
@@ -1005,4 +1005,5 @@ class EnhancedJupiterClient(JupiterClient):
             "routes": routes,
             "source": "mock",
         }
+
 
