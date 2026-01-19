@@ -1,7 +1,7 @@
 import asyncio
 import threading
 import time
-from typing import Optional, Dict, Any, List, Callable
+from typing import Optional, Dict, Any, List, Callable, cast
 from dataclasses import dataclass, field
 from collections import deque
 
@@ -40,11 +40,11 @@ class SolanaChainMonitor:
         self._state = ChainState()
         self._lock = threading.Lock()
         self._running = False
-        self._ws_task: Optional[asyncio.Task] = None
+        self._ws_task: Optional[asyncio.Task[Any]] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
-        self._callbacks: List[Callable] = []
+        self._callbacks: List[Callable[..., Any]] = []
         
-        self._recent_txs: deque = deque(maxlen=100)
+        self._recent_txs: deque[Dict[str, Any]] = deque(maxlen=100)
         
         self._priority_fees_cache: Dict[str, Any] = {}
         self._priority_fees_ts: float = 0
@@ -61,18 +61,18 @@ class SolanaChainMonitor:
                 "connection_errors": self._state.connection_errors
             }
     
-    def _update_slot(self, slot: int):
+    def _update_slot(self, slot: int) -> None:
         with self._lock:
             self._state.latest_slot = slot
             self._state.last_update_ts = time.time()
     
-    def _add_log(self, log_entry: Dict[str, Any]):
+    def _add_log(self, log_entry: Dict[str, Any]) -> None:
         with self._lock:
             self._state.recent_logs.append(log_entry)
             if len(self._state.recent_logs) > self.max_logs:
                 self._state.recent_logs = self._state.recent_logs[-self.max_logs:]
     
-    async def _connect_websocket(self):
+    async def _connect_websocket(self) -> None:
         try:
             from solana.rpc.websocket_api import connect
             
@@ -85,7 +85,13 @@ class SolanaChainMonitor:
                 
                 await ws.slot_subscribe()
                 first_resp = await ws.recv()
-                slot_sub_id = first_resp[0].result
+                slot_sub_id: int = 0
+                if first_resp and len(first_resp) > 0:
+                    first_item = first_resp[0]
+                    if hasattr(first_item, 'result'):
+                        result_val = getattr(first_item, 'result', None)
+                        if isinstance(result_val, int):
+                            slot_sub_id = result_val
                 
                 async for msg in ws:
                     if not self._running:
@@ -94,9 +100,13 @@ class SolanaChainMonitor:
                     try:
                         if hasattr(msg, '__iter__'):
                             for item in msg:
-                                if hasattr(item, 'result') and isinstance(item.result, dict):
-                                    if 'slot' in item.result:
-                                        self._update_slot(item.result['slot'])
+                                item_any = cast(Any, item)
+                                if hasattr(item_any, 'result'):
+                                    result_data = getattr(item_any, 'result', None)
+                                    if isinstance(result_data, dict) and 'slot' in result_data:
+                                        slot_val = result_data.get('slot')
+                                        if isinstance(slot_val, int):
+                                            self._update_slot(slot_val)
                     except Exception as e:
                         logger.debug(f"Error processing WS message: {e}")
                 
@@ -115,7 +125,7 @@ class SolanaChainMonitor:
                 await asyncio.sleep(5)
                 await self._connect_websocket()
     
-    async def _polling_fallback(self):
+    async def _polling_fallback(self) -> None:
         try:
             from solana.rpc.api import Client
             
@@ -128,7 +138,9 @@ class SolanaChainMonitor:
                 try:
                     slot_resp = client.get_slot()
                     if hasattr(slot_resp, 'value'):
-                        self._update_slot(slot_resp.value)
+                        slot_val = getattr(slot_resp, 'value', None)
+                        if isinstance(slot_val, int):
+                            self._update_slot(slot_val)
                 except Exception as e:
                     logger.debug(f"Polling error: {e}")
                 
@@ -140,7 +152,7 @@ class SolanaChainMonitor:
         except Exception as e:
             logger.error(f"Polling fallback error: {e}")
     
-    def _mock_monitoring(self):
+    def _mock_monitoring(self) -> None:
         import hashlib
         
         with self._lock:
@@ -156,13 +168,13 @@ class SolanaChainMonitor:
             self._state.latest_slot = base_slot + slot_offset
             self._state.last_update_ts = time.time()
     
-    def start(self):
+    def start(self) -> None:
         if self._running:
             return
         
         self._running = True
         
-        def run_loop():
+        def run_loop() -> None:
             try:
                 self._loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(self._loop)
@@ -183,7 +195,7 @@ class SolanaChainMonitor:
         if Config.is_simulation():
             self._mock_monitoring()
             
-            def mock_updater():
+            def mock_updater() -> None:
                 while self._running:
                     try:
                         self._mock_monitoring()
@@ -197,7 +209,7 @@ class SolanaChainMonitor:
             thread = threading.Thread(target=run_loop, daemon=True)
             thread.start()
     
-    def stop(self):
+    def stop(self) -> None:
         self._running = False
         with self._lock:
             self._state.is_connected = False
@@ -220,33 +232,67 @@ class SolanaChainMonitor:
                 return None
             
             tx = resp.value
-            meta = tx.transaction.meta if hasattr(tx, 'transaction') else None
+            tx_any = cast(Any, tx)
+            meta_any = cast(Any, None)
+            if hasattr(tx_any, 'transaction'):
+                transaction_obj = getattr(tx_any, 'transaction', None)
+                if transaction_obj and hasattr(transaction_obj, 'meta'):
+                    meta_any = getattr(transaction_obj, 'meta', None)
             
-            signers = []
-            program_ids = []
+            signers: List[str] = []
+            program_ids: List[str] = []
             instructions_count = 0
             
-            if hasattr(tx, 'transaction') and hasattr(tx.transaction, 'transaction'):
-                message = tx.transaction.transaction.message
-                if hasattr(message, 'account_keys'):
-                    signers = [str(k) for k in message.account_keys[:1]]
-                if hasattr(message, 'instructions'):
-                    instructions_count = len(message.instructions)
-                    for ix in message.instructions:
-                        if hasattr(ix, 'program_id_index'):
-                            program_ids.append(str(message.account_keys[ix.program_id_index]))
+            if hasattr(tx_any, 'transaction'):
+                transaction_obj = getattr(tx_any, 'transaction', None)
+                if transaction_obj and hasattr(transaction_obj, 'transaction'):
+                    inner_tx = getattr(transaction_obj, 'transaction', None)
+                    if inner_tx and hasattr(inner_tx, 'message'):
+                        message = getattr(inner_tx, 'message', None)
+                        if message:
+                            if hasattr(message, 'account_keys'):
+                                account_keys = getattr(message, 'account_keys', [])
+                                if account_keys:
+                                    signers = [str(account_keys[0])]
+                            if hasattr(message, 'instructions'):
+                                instructions = getattr(message, 'instructions', [])
+                                instructions_count = len(instructions)
+                                account_keys = getattr(message, 'account_keys', [])
+                                for ix in instructions:
+                                    ix_any = cast(Any, ix)
+                                    if hasattr(ix_any, 'program_id_index'):
+                                        idx = getattr(ix_any, 'program_id_index', None)
+                                        if idx is not None and idx < len(account_keys):
+                                            program_ids.append(str(account_keys[idx]))
+            
+            slot_val = getattr(tx_any, 'slot', 0) if hasattr(tx_any, 'slot') else 0
+            block_time_val = getattr(tx_any, 'block_time', None) if hasattr(tx_any, 'block_time') else None
+            
+            success = True
+            fee_val = 0
+            compute_units_val = 0
+            error_val: Optional[str] = None
+            
+            if meta_any:
+                err = getattr(meta_any, 'err', None)
+                success = err is None
+                fee_val = getattr(meta_any, 'fee', 0) or 0
+                cu = getattr(meta_any, 'compute_units_consumed', None)
+                compute_units_val = cu if cu is not None else 0
+                if err:
+                    error_val = str(err)
             
             return TransactionInfo(
                 signature=signature,
-                slot=tx.slot if hasattr(tx, 'slot') else 0,
-                block_time=tx.block_time if hasattr(tx, 'block_time') else None,
-                success=meta.err is None if meta else True,
-                fee=meta.fee if meta else 0,
-                compute_units=meta.compute_units_consumed if meta and hasattr(meta, 'compute_units_consumed') else 0,
+                slot=int(slot_val) if slot_val else 0,
+                block_time=int(block_time_val) if block_time_val else None,
+                success=success,
+                fee=int(fee_val),
+                compute_units=int(compute_units_val),
                 signers=signers,
                 program_ids=list(set(program_ids)),
                 instructions_count=instructions_count,
-                error=str(meta.err) if meta and meta.err else None
+                error=error_val
             )
             
         except ImportError:
@@ -280,17 +326,20 @@ class SolanaChainMonitor:
                 return self._priority_fees_cache
         
         try:
-            from solana.rpc.api import Client
+            import requests
             
-            client = Client(Config.SOLANA_RPC_URL)
+            payload = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "getRecentPrioritizationFees",
+                "params": []
+            }
             
-            resp = client._provider.make_request(
-                "getRecentPrioritizationFees",
-                []
-            )
+            response = requests.post(Config.SOLANA_RPC_URL, json=payload, timeout=10)
+            resp_data = response.json()
             
-            if resp and "result" in resp:
-                fees = resp["result"]
+            if resp_data and "result" in resp_data:
+                fees = resp_data["result"]
                 if fees:
                     priority_fees = [f["prioritizationFee"] for f in fees if f.get("prioritizationFee")]
                     
@@ -300,7 +349,7 @@ class SolanaChainMonitor:
                         p50_idx = len(sorted_fees) // 2
                         p75_idx = int(len(sorted_fees) * 0.75)
                         
-                        result = {
+                        result: Dict[str, Any] = {
                             "cheap": sorted_fees[p25_idx] if p25_idx < len(sorted_fees) else 1000,
                             "balanced": sorted_fees[p50_idx] if p50_idx < len(sorted_fees) else 10000,
                             "fast": sorted_fees[p75_idx] if p75_idx < len(sorted_fees) else 100000,
@@ -331,6 +380,7 @@ class SolanaChainMonitor:
         try:
             from solana.rpc.api import Client
             from solders.pubkey import Pubkey
+            from solana.rpc.types import TokenAccountOpts
             
             client = Client(Config.SOLANA_RPC_URL)
             
@@ -340,9 +390,13 @@ class SolanaChainMonitor:
             owner = Pubkey.from_string(public_key)
             
             sol_resp = client.get_balance(owner)
-            sol_balance = sol_resp.value / 1e9 if hasattr(sol_resp, 'value') else 0
+            sol_balance = 0.0
+            if hasattr(sol_resp, 'value'):
+                val = getattr(sol_resp, 'value', 0)
+                if val:
+                    sol_balance = float(val) / 1e9
             
-            holdings = [{
+            holdings: List[Dict[str, Any]] = [{
                 "mint": "SOL",
                 "symbol": "SOL",
                 "balance": sol_balance,
@@ -351,26 +405,40 @@ class SolanaChainMonitor:
             }]
             
             try:
-                token_resp = client.get_token_accounts_by_owner_json_parsed(
-                    owner,
-                    opts={"programId": Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")}
-                )
+                token_program = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
+                opts = TokenAccountOpts(program_id=token_program)
+                token_resp = client.get_token_accounts_by_owner_json_parsed(owner, opts)
                 
                 if hasattr(token_resp, 'value'):
-                    for account in token_resp.value:
-                        info = account.account.data.parsed["info"]
-                        mint = info["mint"]
-                        balance = float(info["tokenAmount"]["uiAmount"] or 0)
-                        decimals = info["tokenAmount"]["decimals"]
-                        
-                        if balance > 0:
-                            holdings.append({
-                                "mint": mint,
-                                "symbol": self._get_token_symbol(mint),
-                                "balance": balance,
-                                "decimals": decimals,
-                                "is_native": False
-                            })
+                    accounts = getattr(token_resp, 'value', [])
+                    for account in accounts:
+                        try:
+                            account_any = cast(Any, account)
+                            account_data = getattr(account_any, 'account', None)
+                            if account_data:
+                                data_obj = getattr(account_data, 'data', None)
+                                if data_obj:
+                                    parsed = getattr(data_obj, 'parsed', None)
+                                    if parsed and isinstance(parsed, dict):
+                                        info = parsed.get("info", {})
+                                        if isinstance(info, dict):
+                                            mint = str(info.get("mint", ""))
+                                            token_amount = info.get("tokenAmount", {})
+                                            if isinstance(token_amount, dict):
+                                                ui_amount = token_amount.get("uiAmount")
+                                                balance = float(ui_amount) if ui_amount is not None else 0.0
+                                                decimals = int(token_amount.get("decimals", 0))
+                                                
+                                                if balance > 0:
+                                                    holdings.append({
+                                                        "mint": mint,
+                                                        "symbol": self._get_token_symbol(mint),
+                                                        "balance": balance,
+                                                        "decimals": decimals,
+                                                        "is_native": False
+                                                    })
+                        except Exception as inner_e:
+                            logger.debug(f"Failed to parse token account: {inner_e}")
                             
             except Exception as e:
                 logger.debug(f"Failed to get SPL tokens: {e}")
@@ -399,7 +467,7 @@ class SolanaChainMonitor:
         }
     
     def _get_token_symbol(self, mint: str) -> str:
-        known = {
+        known: Dict[str, str] = {
             "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": "USDC",
             "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB": "USDT",
             "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So": "mSOL",
@@ -407,7 +475,7 @@ class SolanaChainMonitor:
         }
         return known.get(mint, mint[:8] + "...")
     
-    def add_recent_tx(self, signature: str, success: bool = True):
+    def add_recent_tx(self, signature: str, success: bool = True) -> None:
         with self._lock:
             self._recent_txs.append({
                 "signature": signature,
@@ -421,3 +489,4 @@ class SolanaChainMonitor:
 
 
 chain_monitor = SolanaChainMonitor()
+
